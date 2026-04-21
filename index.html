@@ -228,10 +228,16 @@ select option{background:var(--shell-card2);}
 
 /* ═══════════════════════════════════════════════
    PNG EXPORT PAGE — VIBRANT DARK CARD DESIGN
-   Bold colors, rich gradients, mobile-ready
+   FIX: position:fixed + top:-9999px (was left:-9999px)
+   This ensures html2canvas captures CSS correctly
 ═══════════════════════════════════════════════ */
 .png-page {
-  position: absolute; left: -9999px; top: 0;
+  /* ✅ FIX 1: changed from "position:absolute; left:-9999px; top:0"
+     html2canvas fails to resolve styles for elements offset far left.
+     Using top:-9999px keeps it in normal horizontal flow. */
+  position: fixed;
+  left: 0;
+  top: -9999px;
   width: 794px;
   padding: 0;
   font-family: 'Segoe UI', Arial, sans-serif;
@@ -360,15 +366,15 @@ select option{background:var(--shell-card2);}
 .png-page.corp table tr:nth-child(even) td { background: rgba(249,115,22,.05); }
 
 /* YONO highlighted rows */
-.png-page.yono tr.pr1 td { background: rgba(99,102,241,.4); color: #a5b4fc; font-weight: 700; }
-.png-page.yono tr.pr2 td { background: rgba(99,102,241,.18); color: #c7d2fe; }
-.png-page.yono tr.pmr td { background: rgba(6,182,212,.28); color: #67e8f9; font-weight: 700; border-left: 3px solid #22d3ee; }
+.png-page.yono tr.pr1 td { background: rgba(99,102,241,.4) !important; color: #a5b4fc !important; font-weight: 700; }
+.png-page.yono tr.pr2 td { background: rgba(99,102,241,.18) !important; color: #c7d2fe !important; }
+.png-page.yono tr.pmr td { background: rgba(6,182,212,.28) !important; color: #67e8f9 !important; font-weight: 700; border-left: 3px solid #22d3ee; }
 
 /* Corp highlighted rows */
-.png-page.corp tr.pr1 td { background: rgba(249,115,22,.4); color: #fdba74; font-weight: 700; }
-.png-page.corp tr.pr2 td { background: rgba(249,115,22,.18); color: #fed7aa; }
-.png-page.corp tr.pmr td { background: rgba(16,185,129,.28); color: #6ee7b7; font-weight: 700; border-left: 3px solid #34d399; }
-.png-page.corp tr.pgm td { background: rgba(245,158,11,.25); color: #fcd34d; font-weight: 700; border-left: 3px solid #fbbf24; }
+.png-page.corp tr.pr1 td { background: rgba(249,115,22,.4) !important; color: #fdba74 !important; font-weight: 700; }
+.png-page.corp tr.pr2 td { background: rgba(249,115,22,.18) !important; color: #fed7aa !important; }
+.png-page.corp tr.pmr td { background: rgba(16,185,129,.28) !important; color: #6ee7b7 !important; font-weight: 700; border-left: 3px solid #34d399; }
+.png-page.corp tr.pgm td { background: rgba(245,158,11,.25) !important; color: #fcd34d !important; font-weight: 700; border-left: 3px solid #fbbf24; }
 
 /* Rank badge in table */
 .png-page .pbadge {
@@ -1054,7 +1060,9 @@ function gS5(myRows){
   <table class="rpt-table corp"><thead><tr><th>GM Rank</th><th>Branch</th><th>Code</th><th>Category</th><th>Monthly</th><th>Annual</th><th>Region Rank</th></tr></thead><tbody>${rows}</tbody></table>${missNote}</div>`;
 }
 
-// PNG EXPORT — VIBRANT DARK THEME
+// ═══════════════════════════════════════════════════════════
+// PNG EXPORT — ALL THREE FIXES APPLIED
+// ═══════════════════════════════════════════════════════════
 function pBadge(mode,i,isMy,isGM){
   const m=mode==='y';
   if(isGM)  return`<span class="pbadge ${m?'pbadge-my':'pbadge-gm'}">${i+1}</span>`;
@@ -1069,6 +1077,11 @@ function makePNGPage(mode,secNum){
   const isY=mode==='y';
   const div=document.createElement('div');
   div.className='png-page '+(isY?'yono':'corp');
+
+  // ✅ FIX 2: Set background as inline style so html2canvas reads it
+  // (CSS class background alone is not reliably picked up when off-screen)
+  div.style.background = isY ? '#0f0e2e' : '#120800';
+
   document.body.appendChild(div);
 
   const title=isY?'YONO Registered Users Report':'WhatsApp Banking — Corporate GM Report';
@@ -1284,37 +1297,59 @@ async function dlPNG(mode,sec){
   btns.forEach(b=>b.disabled=true);
   try{
     const div=makePNGPage(mode,sec);
-    await new Promise(r=>setTimeout(r,200));
+    // Wait for layout and any fonts to settle
+    await new Promise(r=>setTimeout(r,300));
     const canvas=await html2canvas(div,{
-      scale:2,useCORS:true,
-      backgroundColor: mode==='y'?'#0f0e2e':'#120800',
-      width:794,windowWidth:794,logging:false
+      scale:2,
+      useCORS:true,
+      backgroundColor: mode==='y' ? '#0f0e2e' : '#120800',
+      width:794,
+      windowWidth:794,
+      logging:false,
+      // ✅ FIX 3: prevent coordinate offset miscalculation
+      scrollX:0,
+      scrollY:0
     });
     document.body.removeChild(div);
     const a=document.createElement('a');
     a.download=`SBI_${mode==='y'?'YONO':'Corp'}_S${sec}_${new Date().toISOString().slice(0,10)}.png`;
     a.href=canvas.toDataURL('image/png');a.click();
-  }catch(err){alert('PNG error: '+err.message);}
+  }catch(err){
+    alert('PNG error: '+err.message);
+    // Clean up orphaned element if error
+    document.querySelectorAll('.png-page').forEach(el=>el.remove());
+  }
   btns.forEach(b=>b.disabled=false);
 }
+
 async function dlAllPNG(mode,total){
   const btns=document.querySelectorAll('#png-btns button');
   btns.forEach(b=>b.disabled=true);
   for(let s=1;s<=total;s++){
     try{
       const div=makePNGPage(mode,s);
-      await new Promise(r=>setTimeout(r,200));
+      // Wait for layout and any fonts to settle
+      await new Promise(r=>setTimeout(r,300));
       const canvas=await html2canvas(div,{
-        scale:2,useCORS:true,
-        backgroundColor: mode==='y'?'#0f0e2e':'#120800',
-        width:794,windowWidth:794,logging:false
+        scale:2,
+        useCORS:true,
+        backgroundColor: mode==='y' ? '#0f0e2e' : '#120800',
+        width:794,
+        windowWidth:794,
+        logging:false,
+        // ✅ FIX 3: prevent coordinate offset miscalculation
+        scrollX:0,
+        scrollY:0
       });
       document.body.removeChild(div);
       const a=document.createElement('a');
       a.download=`SBI_${mode==='y'?'YONO':'Corp'}_S${s}_${new Date().toISOString().slice(0,10)}.png`;
       a.href=canvas.toDataURL('image/png');a.click();
       await new Promise(r=>setTimeout(r,600));
-    }catch(err){alert('Section '+s+' error: '+err.message);}
+    }catch(err){
+      alert('Section '+s+' error: '+err.message);
+      document.querySelectorAll('.png-page').forEach(el=>el.remove());
+    }
   }
   btns.forEach(b=>b.disabled=false);
 }
