@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SBI Report Hub — AO Kozhikode</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+/* ═══════════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════════ */
+:root {
+  --font: 'Plus Jakarta Sans', sans-serif;
+  --mono: 'Space Mono', monospace;
+
+  /* Neutral shell */
+  --shell-bg:   #0f1115;
+  --shell-card: #17191e;
+  --shell-card2:#1e2027;
+  --shell-bdr:  #2a2d35;
+  --shell-bdr2: #383c47;
+  --text:       #eceef2;
+  --muted:      #878ea0;
+  --dim:        #4a5066;
+
+  /* YONO theme — Electric Indigo + Cyan */
+  --y-pri:   #6c63ff;
+  --y-pri2:  #a29bfe;
+  --y-acc:   #00cec9;
+  --y-acc2:  #81ecec;
+  --y-bg:    #13123a;
+  --y-bg2:   #1a1940;
+  --y-bdr:   #3d3b6e;
+  --y-row1:  rgba(108,99,255,0.22);
+  --y-rowmy: rgba(0,206,201,0.18);
+  --y-alt:   rgba(108,99,255,0.06);
+
+  /* Corporate GM theme — Saffron + Emerald */
+  --g-pri:   #ff6b35;
+  --g-pri2:  #ffa07a;
+  --g-acc:   #00b894;
+  --g-acc2:  #55efc4;
+  --g-bg:    #1a1208;
+  --g-bg2:   #201608;
+  --g-bdr:   #5a3a18;
+  --g-row1:  rgba(255,107,53,0.22);
+  --g-rowmy: rgba(0,184,148,0.18);
+  --g-alt:   rgba(255,107,53,0.06);
+
+  /* Status */
+  --ok:    #00b894; --ok-bg:   rgba(0,184,148,0.12);
+  --err:   #ff7675; --err-bg:  rgba(255,118,117,0.12);
+  --info:  #74b9ff; --info-bg: rgba(116,185,255,0.12);
+  --warn:  #fdcb6e; --warn-bg: rgba(253,203,110,0.12);
+}
+
+/* ═══════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--shell-bg);color:var(--text);font-size:13px;min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* ═══════════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════════ */
+.app-header{
+  padding:14px 20px;
+  display:flex;align-items:center;gap:14px;
+  border-bottom:1px solid var(--shell-bdr);
+  background:var(--shell-card);
+  position:sticky;top:0;z-index:100;
+}
+.header-logo{
+  width:42px;height:42px;border-radius:10px;
+  background:linear-gradient(135deg,#6c63ff,#00cec9);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:13px;color:#fff;letter-spacing:.5px;flex-shrink:0;
+}
+.header-title{font-size:15px;font-weight:700;color:var(--text);}
+.header-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+.mode-pill{
+  margin-left:auto;
+  padding:4px 12px;border-radius:20px;
+  font-size:10px;font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;
+  transition:all .3s;
+}
+.mode-pill.yono{background:var(--y-bg2);color:var(--y-pri2);border:1px solid var(--y-bdr);}
+.mode-pill.corp{background:var(--g-bg2);color:var(--g-pri2);border:1px solid var(--g-bdr);}
+.mode-pill.none{background:var(--shell-card2);color:var(--muted);border:1px solid var(--shell-bdr);}
+
+/* ═══════════════════════════════════════════════
+   TAB BAR
+═══════════════════════════════════════════════ */
+.tab-bar{
+  display:flex;gap:2px;padding:0 20px;
+  background:var(--shell-card);
+  border-bottom:1px solid var(--shell-bdr);
+  overflow-x:auto;-webkit-overflow-scrolling:touch;
+}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab{
+  padding:10px 16px;white-space:nowrap;
+  font-size:11px;font-weight:600;color:var(--muted);
+  cursor:pointer;border-bottom:2px solid transparent;
+  transition:all .15s;letter-spacing:.3px;text-transform:uppercase;
+  user-select:none;
+}
+.tab:hover{color:var(--text);}
+.tab.active-yono{color:var(--y-pri2);border-bottom-color:var(--y-pri);}
+.tab.active-corp{color:var(--g-pri2);border-bottom-color:var(--g-pri);}
+
+/* ═══════════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════════ */
+.main{padding:16px 20px;max-width:1060px;margin:0 auto;}
+.panel{display:none;}.panel.active{display:block;}
+
+/* ═══════════════════════════════════════════════
+   CARDS
+═══════════════════════════════════════════════ */
+.card{
+  background:var(--shell-card);border:1px solid var(--shell-bdr);
+  border-radius:12px;padding:16px 18px;margin-bottom:14px;
+}
+.card.yono-card{border-color:var(--y-bdr);background:var(--y-bg);}
+.card.corp-card{border-color:var(--g-bdr);background:var(--g-bg);}
+.card-title{
+  font-size:11px;font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;margin-bottom:12px;
+}
+.card-title.yono{color:var(--y-pri2);}
+.card-title.corp{color:var(--g-pri2);}
+
+/* ═══════════════════════════════════════════════
+   UPLOAD ZONE
+═══════════════════════════════════════════════ */
+.upload-zone{
+  border:2px dashed var(--shell-bdr2);
+  border-radius:12px;padding:28px 20px;
+  text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--shell-card2);
+  position:relative;
+}
+.upload-zone:hover{border-color:var(--y-pri);background:rgba(108,99,255,.05);}
+.upload-zone input{display:none;}
+.upload-icon{font-size:32px;margin-bottom:8px;}
+.upload-zone h3{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.upload-zone p{font-size:11px;color:var(--muted);line-height:1.7;}
+.detect-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:10px;padding:5px 14px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:.5px;
+}
+.detect-badge.yono{background:var(--y-bg2);color:var(--y-acc);border:1px solid var(--y-bdr);}
+.detect-badge.corp{background:var(--g-bg2);color:var(--g-acc);border:1px solid var(--g-bdr);}
+
+/* ═══════════════════════════════════════════════
+   SUMMARY CARDS GRID
+═══════════════════════════════════════════════ */
+.sum-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  gap:8px;margin-bottom:16px;
+}
+.sc{
+  border-radius:10px;padding:12px 10px;text-align:center;
+  border:1px solid var(--shell-bdr);background:var(--shell-card2);
+  position:relative;overflow:hidden;
+}
+.sc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.sc.c1::after{background:var(--y-pri);}  .sc.c2::after{background:var(--y-acc);}
+.sc.c3::after{background:#fd79a8;}        .sc.c4::after{background:var(--warn);}
+.sc.c5::after{background:var(--ok);}      .sc.c6::after{background:var(--info);}
+.sc.g1::after{background:var(--g-pri);}  .sc.g2::after{background:var(--g-acc);}
+.sc.g3::after{background:#a29bfe;}        .sc.g4::after{background:var(--warn);}
+.sc.g5::after{background:#fd79a8;}        .sc.g6::after{background:var(--info);}
+.sc .sv{font-family:var(--mono);font-size:20px;font-weight:700;margin-top:4px;}
+.sc.c1 .sv{color:var(--y-pri2);} .sc.c2 .sv{color:var(--y-acc2);}
+.sc.c3 .sv{color:#ff7eb3;}       .sc.c4 .sv{color:var(--warn);}
+.sc.c5 .sv{color:var(--ok);}     .sc.c6 .sv{color:var(--info);}
+.sc.g1 .sv{color:var(--g-pri2);} .sc.g2 .sv{color:var(--g-acc2);}
+.sc.g3 .sv{color:#a29bfe;}       .sc.g4 .sv{color:var(--warn);}
+.sc.g5 .sv{color:#ff7eb3;}       .sc.g6 .sv{color:var(--info);}
+.sc .sl{font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:.3px;}
+
+/* ═══════════════════════════════════════════════
+   SECTION HEADERS
+═══════════════════════════════════════════════ */
+.sec-wrap{margin-bottom:18px;}
+.sec-hdr{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 14px;border-radius:10px 10px 0 0;
+  font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+}
+/* YONO section colours */
+.sy1{background:linear-gradient(90deg,#1a184a,#13123a);border:1px solid var(--y-pri);color:var(--y-pri2);border-bottom:none;}
+.sy2{background:linear-gradient(90deg,#0d2a2a,#0a1f1f);border:1px solid var(--y-acc);color:var(--y-acc2);border-bottom:none;}
+.sy3{background:linear-gradient(90deg,#2a1a3a,#1f1230);border:1px solid #a29bfe;color:#d4c9ff;border-bottom:none;}
+.sy4{background:linear-gradient(90deg,#2a1a28,#1f1220);border:1px solid #fd79a8;color:#ffb3d0;border-bottom:none;}
+/* Corporate GM section colours */
+.sg1{background:linear-gradient(90deg,#2a1a00,#1a1000);border:1px solid var(--g-pri);color:var(--g-pri2);border-bottom:none;}
+.sg2{background:linear-gradient(90deg,#002a20,#001a14);border:1px solid var(--g-acc);color:var(--g-acc2);border-bottom:none;}
+.sg3{background:linear-gradient(90deg,#1a1040,#100a28);border:1px solid #a29bfe;color:#c8baff;border-bottom:none;}
+.sg4{background:linear-gradient(90deg,#1a1040,#120828);border:1px solid #fd79a8;color:#ffb3cc;border-bottom:none;}
+.sg5{background:linear-gradient(90deg,#2a1400,#1a0c00);border:1px solid var(--warn);color:var(--warn);border-bottom:none;}
+
+.sec-num{
+  width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;
+}
+.sy1 .sec-num{background:var(--y-bg);border:1px solid var(--y-pri);color:var(--y-pri);}
+.sy2 .sec-num{background:var(--y-bg);border:1px solid var(--y-acc);color:var(--y-acc);}
+.sy3 .sec-num{background:var(--y-bg);border:1px solid #a29bfe;color:#a29bfe;}
+.sy4 .sec-num{background:var(--y-bg);border:1px solid #fd79a8;color:#fd79a8;}
+.sg1 .sec-num{background:var(--g-bg);border:1px solid var(--g-pri);color:var(--g-pri);}
+.sg2 .sec-num{background:var(--g-bg);border:1px solid var(--g-acc);color:var(--g-acc);}
+.sg3 .sec-num{background:var(--g-bg);border:1px solid #a29bfe;color:#a29bfe;}
+.sg4 .sec-num{background:var(--g-bg);border:1px solid #fd79a8;color:#fd79a8;}
+.sg5 .sec-num{background:var(--g-bg);border:1px solid var(--warn);color:var(--warn);}
+
+/* ═══════════════════════════════════════════════
+   REPORT TABLES
+═══════════════════════════════════════════════ */
+.rpt-table{
+  width:100%;border-collapse:collapse;font-size:11px;
+  border:1px solid var(--shell-bdr);border-top:none;
+  border-radius:0 0 10px 10px;overflow:hidden;
+}
+.rpt-table th{
+  padding:7px 9px;text-align:center;font-size:9px;
+  font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--muted);border-bottom:1px solid var(--shell-bdr);
+  background:var(--shell-card2);
+}
+.rpt-table td{padding:6px 9px;border-bottom:1px solid var(--shell-bdr);color:var(--text);}
+.rpt-table tr:last-child td{border-bottom:none;}
+/* YONO row highlights */
+.rpt-table.yono tr.rank1 td{background:var(--y-row1);color:var(--y-pri2);font-weight:600;}
+.rpt-table.yono tr.rank2 td{background:rgba(108,99,255,.1);color:#c8c4ff;}
+.rpt-table.yono tr.rank3 td{background:rgba(108,99,255,.06);color:#b8b4ee;}
+.rpt-table.yono tr.my-row td{background:var(--y-rowmy);color:var(--y-acc2);font-weight:600;border-left:2px solid var(--y-acc);}
+.rpt-table.yono tr.alt td{background:var(--y-alt);}
+/* Corp row highlights */
+.rpt-table.corp tr.rank1 td{background:var(--g-row1);color:var(--g-pri2);font-weight:600;}
+.rpt-table.corp tr.rank2 td{background:rgba(255,107,53,.1);color:#ffc1a8;}
+.rpt-table.corp tr.rank3 td{background:rgba(255,107,53,.06);}
+.rpt-table.corp tr.my-row td{background:var(--g-rowmy);color:var(--g-acc2);font-weight:600;border-left:2px solid var(--g-acc);}
+.rpt-table.corp tr.gm-row td{background:rgba(253,203,110,.12);color:var(--warn);font-weight:600;border-left:2px solid var(--warn);}
+.rpt-table.corp tr.alt td{background:var(--g-alt);}
+
+/* rank badges */
+.rb{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-family:var(--mono);font-size:10px;font-weight:700;}
+.rb-y1{background:rgba(108,99,255,.25);border:1px solid var(--y-pri);color:var(--y-pri2);}
+.rb-y2{background:rgba(108,99,255,.12);border:1px solid var(--y-bdr);color:var(--y-pri2);}
+.rb-y3{background:rgba(108,99,255,.08);border:1px solid var(--y-bdr);color:var(--muted);}
+.rb-yp{background:var(--shell-card2);border:1px solid var(--shell-bdr2);color:var(--muted);}
+.rb-ym{background:rgba(0,206,201,.2);border:1px solid var(--y-acc);color:var(--y-acc2);}
+.rb-g1{background:rgba(255,107,53,.25);border:1px solid var(--g-pri);color:var(--g-pri2);}
+.rb-g2{background:rgba(255,107,53,.12);border:1px solid var(--g-bdr);color:var(--g-pri2);}
+.rb-g3{background:rgba(255,107,53,.08);border:1px solid var(--g-bdr);color:var(--muted);}
+.rb-gp{background:var(--shell-card2);border:1px solid var(--shell-bdr2);color:var(--muted);}
+.rb-gm{background:rgba(0,184,148,.2);border:1px solid var(--g-acc);color:var(--g-acc2);}
+.rb-gw{background:rgba(253,203,110,.2);border:1px solid var(--warn);color:var(--warn);}
+
+/* strip messages */
+.note-strip{font-size:10px;padding:5px 12px;border-radius:0 0 10px 10px;border:1px solid;border-top:none;}
+.note-strip.err{color:var(--err);background:var(--err-bg);border-color:var(--err);}
+.note-strip.info{color:var(--info);background:var(--info-bg);border-color:var(--info);}
+.note-strip.warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn);}
+.legend{
+  display:flex;gap:12px;flex-wrap:wrap;font-size:9px;color:var(--muted);
+  padding:5px 10px;background:var(--shell-card2);
+  border:1px solid var(--shell-bdr);border-top:none;border-radius:0 0 10px 10px;
+}
+.legend span{display:flex;align-items:center;gap:4px;}
+.leg-dot{width:8px;height:8px;border-radius:50%;}
+
+/* ═══════════════════════════════════════════════
+   POSITION BANNER (Corp Section 1)
+═══════════════════════════════════════════════ */
+.pos-banner{
+  border-radius:10px;padding:14px 18px;margin-bottom:14px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  background:linear-gradient(135deg,var(--g-bg2),var(--g-bg));
+  border:1px solid var(--g-pri);
+}
+.pos-rank-big{
+  font-family:var(--mono);font-size:48px;font-weight:700;
+  color:var(--g-pri);line-height:1;min-width:70px;text-align:center;
+}
+.pos-rank-big sup{font-size:16px;color:var(--g-pri2);}
+.pos-info h2{font-size:15px;font-weight:700;color:var(--g-pri2);}
+.pos-info p{font-size:10px;color:var(--muted);margin-top:3px;}
+.pos-stat{margin-left:auto;text-align:right;}
+.pos-stat .pv{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--g-acc);}
+.pos-stat .pl{font-size:9px;color:var(--muted);margin-top:2px;}
+
+/* ═══════════════════════════════════════════════
+   FORM ELEMENTS
+═══════════════════════════════════════════════ */
+.form-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px;}
+.form-row>div{flex:1;min-width:100px;}
+.form-row>.no-grow{flex:0;}
+label{font-size:10px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.3px;text-transform:uppercase;}
+input[type=text],input[type=url],select,textarea{
+  width:100%;padding:7px 10px;
+  border:1px solid var(--shell-bdr2);border-radius:7px;
+  font-size:12px;font-family:var(--font);
+  background:var(--shell-card2);color:var(--text);
+  outline:none;transition:border-color .15s;
+}
+input[type=text]:focus,input[type=url]:focus,select:focus,textarea:focus{border-color:var(--y-pri);}
+select option{background:var(--shell-card2);}
+
+/* ═══════════════════════════════════════════════
+   GM LIST
+═══════════════════════════════════════════════ */
+.gm-list-box{
+  border:1px solid var(--shell-bdr);border-radius:8px;
+  max-height:300px;overflow-y:auto;margin-top:10px;
+  background:var(--shell-card2);
+}
+.gm-item{
+  display:flex;align-items:center;padding:6px 12px;
+  border-bottom:1px solid var(--shell-bdr);gap:8px;font-size:11px;
+}
+.gm-item:last-child{border-bottom:none;}
+.gm-item:nth-child(even){background:rgba(255,255,255,.02);}
+.gm-code{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--y-pri2);min-width:58px;}
+.gm-name{flex:1;color:var(--text);}
+.gm-badge{
+  background:rgba(0,206,201,.15);color:var(--y-acc);
+  font-size:9px;padding:2px 7px;border-radius:20px;
+  font-weight:700;border:1px solid rgba(0,206,201,.3);white-space:nowrap;
+}
+.gm-rm{background:none;border:none;color:var(--err);cursor:pointer;font-size:13px;padding:0 3px;}
+
+/* ═══════════════════════════════════════════════
+   GOOGLE SHEETS SYNC
+═══════════════════════════════════════════════ */
+.sync-status{
+  display:flex;align-items:center;gap:8px;font-size:11px;
+  padding:6px 10px;border-radius:7px;margin-bottom:8px;
+}
+.sync-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sync-dot.connected{background:var(--ok);box-shadow:0 0 6px var(--ok);}
+.sync-dot.disconnected{background:var(--err);}
+.sync-dot.syncing{background:var(--warn);animation:pulse .8s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* ═══════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════ */
+.btn{
+  padding:7px 14px;border-radius:7px;cursor:pointer;
+  font-size:11px;font-weight:700;font-family:var(--font);
+  border:1px solid var(--shell-bdr2);background:var(--shell-card2);color:var(--text);
+  transition:all .12s;white-space:nowrap;letter-spacing:.3px;
+}
+.btn:hover{border-color:var(--y-pri);color:var(--y-pri2);}
+.btn-y{background:rgba(108,99,255,.2);color:var(--y-pri2);border-color:var(--y-pri);}
+.btn-y:hover{background:rgba(108,99,255,.35);}
+.btn-g{background:rgba(255,107,53,.2);color:var(--g-pri2);border-color:var(--g-pri);}
+.btn-g:hover{background:rgba(255,107,53,.35);}
+.btn-ok{background:var(--ok-bg);color:var(--ok);border-color:var(--ok);}
+.btn-ok:hover{background:rgba(0,184,148,.25);}
+.btn-err{background:var(--err-bg);color:var(--err);border-color:var(--err);}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;}
+
+/* status chips */
+.chip{font-size:10px;padding:5px 10px;border-radius:6px;margin:5px 0;display:block;}
+.chip.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok);}
+.chip.err{background:var(--err-bg);color:var(--err);border:1px solid var(--err);}
+.chip.info{background:var(--info-bg);color:var(--info);border:1px solid var(--info);}
+.chip.warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);}
+
+/* ═══════════════════════════════════════════════
+   HELP TAB
+═══════════════════════════════════════════════ */
+.help-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.help-block{background:var(--shell-card2);border:1px solid var(--shell-bdr);border-radius:10px;padding:14px 16px;}
+.help-block h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.help-block h3.yono{color:var(--y-pri2);}
+.help-block h3.corp{color:var(--g-pri2);}
+.help-block h3.neutral{color:var(--muted);}
+.help-block p,.help-block li{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:4px;}
+.help-block code{background:var(--shell-card);border:1px solid var(--shell-bdr);padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:10px;color:var(--y-acc);}
+.col-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:8px;}
+.col-chip{background:var(--shell-card);border:1px solid var(--shell-bdr);border-radius:6px;padding:6px 8px;}
+.col-chip .cc{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--warn);}
+.col-chip .cd{font-size:9px;color:var(--muted);margin-top:2px;}
+.apps-script-box{background:var(--shell-card);border:1px solid var(--shell-bdr);border-radius:8px;padding:12px;margin-top:8px;}
+.apps-script-box pre{font-family:var(--mono);font-size:9px;color:var(--y-acc2);white-space:pre-wrap;line-height:1.6;}
+
+/* ═══════════════════════════════════════════════
+   PNG EXPORT PAGE (off-screen white)
+═══════════════════════════════════════════════ */
+.png-page{
+  position:absolute;left:-9999px;top:0;
+  width:794px;background:#fff;
+  padding:26px 24px 20px;
+  font-family:'Segoe UI',Arial,sans-serif;
+  color:#1a1a2e;font-size:12px;
+}
+/* YONO PNG styles — cool indigo palette */
+.png-page.yono .ph1{background:linear-gradient(90deg,#2d2b8e,#4b47c4);color:#fff;font-size:15px;font-weight:700;padding:10px 16px 6px;border-radius:6px 6px 0 0;}
+.png-page.yono .ph2{background:#3d3aaa;color:#d4d0ff;font-size:11px;padding:5px 16px 8px;border-radius:0 0 6px 6px;margin-bottom:12px;}
+.png-page.yono table th{background:#2d2b8e;color:#fff;}
+.png-page.yono .psec{color:#fff;}
+.png-page.yono .s1{background:#2d2b8e;}
+.png-page.yono .s2{background:#167070;}
+.png-page.yono .s3{background:#5a3a8a;}
+.png-page.yono .s4{background:#7a2060;}
+/* Corp PNG styles — warm saffron palette */
+.png-page.corp .ph1{background:linear-gradient(90deg,#8a3a00,#c4570a);color:#fff;font-size:15px;font-weight:700;padding:10px 16px 6px;border-radius:6px 6px 0 0;}
+.png-page.corp .ph2{background:#a84808;color:#ffd4b8;font-size:11px;padding:5px 16px 8px;border-radius:0 0 6px 6px;margin-bottom:12px;}
+.png-page.corp table th{background:#8a3a00;color:#fff;}
+.png-page.corp .psec{color:#fff;}
+.png-page.corp .s1{background:#8a3a00;}
+.png-page.corp .s2{background:#005a40;}
+.png-page.corp .s3{background:#3a1a80;}
+.png-page.corp .s4{background:#7a1a50;}
+.png-page.corp .s5{background:#6a4400;}
+
+.png-page .psec{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:7px 12px;border-radius:6px 6px 0 0;margin-top:14px;}
+.png-page .sum-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.png-page .psc{flex:1;min-width:100px;border-radius:6px;padding:7px 6px;text-align:center;}
+.png-page .psc .psv{font-size:16px;font-weight:700;font-family:'Courier New',monospace;}
+.png-page .psc .psl{font-size:9px;color:#666;margin-top:2px;}
+/* YONO sum card colours */
+.png-page.yono .psc.c1{background:#e8e6ff;border:1px solid #6c63ff;} .png-page.yono .psc.c1 .psv{color:#2d2b8e;}
+.png-page.yono .psc.c2{background:#e0fafa;border:1px solid #00cec9;} .png-page.yono .psc.c2 .psv{color:#007a78;}
+.png-page.yono .psc.c3{background:#ffe8f5;border:1px solid #fd79a8;} .png-page.yono .psc.c3 .psv{color:#8a1a50;}
+.png-page.yono .psc.c4{background:#fff8e0;border:1px solid #fdcb6e;} .png-page.yono .psc.c4 .psv{color:#8a6000;}
+.png-page.yono .psc.c5{background:#e0f8ee;border:1px solid #00b894;} .png-page.yono .psc.c5 .psv{color:#006040;}
+/* Corp sum card colours */
+.png-page.corp .psc.c1{background:#fff0e8;border:1px solid #ff6b35;} .png-page.corp .psc.c1 .psv{color:#8a3a00;}
+.png-page.corp .psc.c2{background:#e0f8f0;border:1px solid #00b894;} .png-page.corp .psc.c2 .psv{color:#005a40;}
+.png-page.corp .psc.c3{background:#ece8ff;border:1px solid #a29bfe;} .png-page.corp .psc.c3 .psv{color:#3a1a80;}
+.png-page.corp .psc.c4{background:#fff8e0;border:1px solid #fdcb6e;} .png-page.corp .psc.c4 .psv{color:#8a6000;}
+.png-page.corp .psc.c5{background:#ffe8f5;border:1px solid #fd79a8;} .png-page.corp .psc.c5 .psv{color:#7a1a50;}
+
+.png-page table{width:100%;border-collapse:collapse;font-size:11px;}
+.png-page table td{padding:4px 8px;border-bottom:.5px solid #e0e0e8;}
+.png-page table tr:nth-child(even) td{background:#f8f8fc;}
+/* YONO table row overrides */
+.png-page.yono tr.pr1 td{background:#e8e6ff;color:#2d2b8e;font-weight:700;}
+.png-page.yono tr.pr2 td{background:#f0eff9;}
+.png-page.yono tr.pmr td{background:#e0fafa;color:#007a78;font-weight:700;border-left:3px solid #00cec9;}
+/* Corp table row overrides */
+.png-page.corp tr.pr1 td{background:#fff0e8;color:#8a3a00;font-weight:700;}
+.png-page.corp tr.pr2 td{background:#fff8f4;}
+.png-page.corp tr.pmr td{background:#e0f8f0;color:#005a40;font-weight:700;border-left:3px solid #00b894;}
+.png-page.corp tr.pgm td{background:#fffbe8;color:#7a5000;font-weight:700;border-left:3px solid #fdcb6e;}
+
+.png-page .pleg{font-size:9px;color:#666;background:#f5f5f8;padding:4px 10px;border-radius:0 0 6px 6px;}
+.png-page .pnote{font-size:9px;color:#8a0000;background:#ffe8e8;padding:4px 10px;border-radius:0 0 6px 6px;}
+.png-page .pfooter{font-size:8px;color:#999;text-align:right;margin-top:8px;border-top:.5px solid #e0e0e0;padding-top:5px;}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════ */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--shell-bg);}
+::-webkit-scrollbar-thumb{background:var(--shell-bdr2);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--y-pri);}
+</style>
+</head>
+<body>
+
+<!-- ═══ APP HEADER ═══ -->
+<div class="app-header">
+  <div class="header-logo">SBI</div>
+  <div>
+    <div class="header-title">SBI Report Hub</div>
+    <div class="header-sub">AO Kozhikode · REG-04 Malappuram · Kerala Circle</div>
+  </div>
+  <div class="mode-pill none" id="mode-pill">No File Loaded</div>
+</div>
+
+<!-- ═══ TAB BAR ═══ -->
+<div class="tab-bar">
+  <div class="tab active-yono" id="tab-report" onclick="switchTab('report')">📊 Report</div>
+  <div class="tab" id="tab-gm" onclick="switchTab('gm')">🏦 GM List</div>
+  <div class="tab" id="tab-sheets" onclick="switchTab('sheets')">🔗 Google Sheets</div>
+  <div class="tab" id="tab-help" onclick="switchTab('help')">ℹ️ Help</div>
+</div>
+
+<div class="main">
+
+<!-- ══════════════════════════════════════
+     REPORT TAB
+══════════════════════════════════════ -->
+<div id="panel-report" class="panel active">
+  <div class="card">
+    <div class="upload-zone" onclick="document.getElementById('xlfile').click()">
+      <input type="file" id="xlfile" accept=".xlsx,.xls" onchange="handleFile(event)">
+      <div class="upload-icon">📂</div>
+      <h3>Upload Excel File</h3>
+      <p>
+        <strong>YONO:</strong> Sheet "YONO" · Columns C–G · Row 1 = Header<br>
+        <strong>Corporate GM:</strong> Any sheet · Row 3 = Headers · Columns B,D,E,F,K,O · Data from Row 4<br>
+        <em style="color:var(--y-acc);font-size:10px">File type is detected automatically</em>
+      </p>
+      <div id="detect-badge" style="display:none"></div>
+    </div>
+    <div id="file-status"></div>
+  </div>
+  <div id="report-area" style="display:none">
+    <div class="sum-grid" id="sum-cards"></div>
+    <div id="sections-html"></div>
+    <div class="btn-row" id="png-btns"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     GM LIST TAB
+══════════════════════════════════════ -->
+<div id="panel-gm" class="panel">
+  <div class="card">
+    <div class="card-title yono">GM Master List <span style="font-size:9px;color:var(--muted);font-weight:400">(shared by both report types · synced to Google Sheets)</span></div>
+    <div class="form-row">
+      <div><label>Branch Code</label><input type="text" id="gm-code" placeholder="e.g. 00262" maxlength="10"></div>
+      <div style="flex:2"><label>Branch Name</label><input type="text" id="gm-name" placeholder="e.g. TIRUR"></div>
+      <div><label>Category</label>
+        <select id="gm-cat">
+          <option>Grahak Mitra</option>
+          <option>BC Point</option>
+          <option>CSP</option>
+          <option>Ultra Small Branch</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="no-grow"><label>&nbsp;</label><button class="btn btn-y" onclick="addGM()">+ Add</button></div>
+    </div>
+    <div id="gm-status"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px;">
+      <span style="font-size:10px;color:var(--muted)" id="gm-count">0 branches</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn" onclick="exportGM()">⬇ Export CSV</button>
+        <label class="btn" style="cursor:pointer;margin:0">⬆ Import CSV<input type="file" accept=".csv" onchange="importGM(event)" style="display:none"></label>
+        <button class="btn btn-err" onclick="clearGM()">🗑 Clear All</button>
+      </div>
+    </div>
+    <div class="gm-list-box" id="gm-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     GOOGLE SHEETS TAB
+══════════════════════════════════════ -->
+<div id="panel-sheets" class="panel">
+  <div class="card">
+    <div class="card-title yono">Google Sheets Sync</div>
+    <div id="sync-status-bar" class="sync-status">
+      <div class="sync-dot disconnected" id="sync-dot"></div>
+      <span id="sync-label" style="color:var(--muted)">Not connected to Google Sheets</span>
+    </div>
+    <div class="form-row">
+      <div style="flex:3">
+        <label>Google Apps Script Web App URL</label>
+        <input type="url" id="gas-url" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" oninput="saveGASUrl()">
+      </div>
+      <div class="no-grow">
+        <label>&nbsp;</label>
+        <button class="btn btn-ok" onclick="testConnection()">Test</button>
+      </div>
+      <div class="no-grow">
+        <label>&nbsp;</label>
+        <button class="btn btn-y" onclick="pushToSheets()">⬆ Push to Sheets</button>
+      </div>
+      <div class="no-grow">
+        <label>&nbsp;</label>
+        <button class="btn btn-g" onclick="pullFromSheets()">⬇ Pull from Sheets</button>
+      </div>
+    </div>
+    <div id="sheets-status"></div>
+    <div class="card" style="margin-top:12px;background:var(--shell-card2);">
+      <div class="card-title neutral" style="color:var(--warn)">Setup Instructions</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.8;">
+        <p><strong style="color:var(--text)">Step 1:</strong> Open your Google Sheet → Extensions → Apps Script</p>
+        <p><strong style="color:var(--text)">Step 2:</strong> Delete any existing code and paste the script below</p>
+        <p><strong style="color:var(--text)">Step 3:</strong> Click Deploy → New Deployment → Web App → Execute as: <em>Me</em> → Who has access: <em>Anyone</em></p>
+        <p><strong style="color:var(--text)">Step 4:</strong> Copy the Web App URL and paste it above</p>
+      </div>
+      <div class="apps-script-box" style="margin-top:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:10px;color:var(--y-acc2);font-weight:700;">Google Apps Script — paste into your sheet</span>
+          <button class="btn" style="font-size:10px;padding:4px 10px;" onclick="copyScript()">Copy Script</button>
+        </div>
+        <pre id="gas-script">const SHEET_NAME = "GM_Master";
+
+function doGet(e) {
+  return handleRequest(e);
+}
+function doPost(e) {
+  return handleRequest(e);
+}
+function handleRequest(e) {
+  const action = (e.parameter && e.parameter.action) || (e.postData && JSON.parse(e.postData.contents).action);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(["Code","Name","Category"]);
+  }
+  if (action === "get") {
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const rows = data.slice(1).map(r => ({
+      code: r[0], name: r[1], cat: r[2]
+    })).filter(r => r.code);
+    return ContentService.createTextOutput(JSON.stringify({ok:true,data:rows}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (action === "set") {
+    const body = JSON.parse(e.postData.contents);
+    sheet.clearContents();
+    sheet.appendRow(["Code","Name","Category"]);
+    body.data.forEach(r => sheet.appendRow([r.code, r.name, r.cat]));
+    return ContentService.createTextOutput(JSON.stringify({ok:true,count:body.data.length}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  return ContentService.createTextOutput(JSON.stringify({ok:false,error:"Unknown action"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     HELP TAB
+══════════════════════════════════════ -->
+<div id="panel-help" class="panel">
+  <div class="help-grid">
+    <div class="help-block">
+      <h3 class="yono">YONO Report — File Format</h3>
+      <p>Sheet name: <code>YONO</code> (first sheet used if not found)</p>
+      <p>Row 1 = Headers, data from Row 2</p>
+      <div class="col-grid">
+        <div class="col-chip"><div class="cc">Col C</div><div class="cd">Module Name</div></div>
+        <div class="col-chip"><div class="cc">Col D</div><div class="cd">Region Code</div></div>
+        <div class="col-chip"><div class="cc">Col E</div><div class="cd">Branch Name</div></div>
+        <div class="col-chip"><div class="cc">Col F</div><div class="cd">Branch Code</div></div>
+        <div class="col-chip"><div class="cc">Col G</div><div class="cd">Registered Users</div></div>
+      </div>
+      <p style="margin-top:8px;">Generates: Top 5 Regions · Top 10 Branches · REG-004 Ranking · GM Ranking</p>
+    </div>
+    <div class="help-block">
+      <h3 class="corp">Corporate GM Report — File Format</h3>
+      <p>Row 3 = Headers, data from Row 4</p>
+      <div class="col-grid">
+        <div class="col-chip"><div class="cc">Col B</div><div class="cd">CIRCLENAME</div></div>
+        <div class="col-chip"><div class="cc">Col D</div><div class="cd">MODULENAME</div></div>
+        <div class="col-chip"><div class="cc">Col E</div><div class="cd">REGIONNAME</div></div>
+        <div class="col-chip"><div class="cc">Col F</div><div class="cd">BRANCH_LABEL<br><span style="font-size:9px">00262 - TIRUR</span></div></div>
+        <div class="col-chip"><div class="cc">Col K</div><div class="cd">Monthly Reg.</div></div>
+        <div class="col-chip"><div class="cc">Col O</div><div class="cd">Annual Reg.</div></div>
+      </div>
+      <p style="margin-top:8px;">Generates: Corporate Position · Top 10 Circle Regions · Top 10 Circle Branches · My Branch Ranking · GM Ranking</p>
+    </div>
+    <div class="help-block">
+      <h3 class="neutral">Auto-Detection Logic</h3>
+      <p>On upload the app checks row 3 for <code>CIRCLENAME</code> → Corporate GM mode.</p>
+      <p>Otherwise falls back to YONO mode (columns C–G, row 1 header).</p>
+      <p>A coloured badge confirms which mode was detected. You can re-upload any time.</p>
+    </div>
+    <div class="help-block">
+      <h3 class="neutral">GitHub Hosting</h3>
+      <p>This file is a single self-contained HTML. To host on GitHub Pages:</p>
+      <p>1. Create a repo (e.g. <code>sbi-report-hub</code>)</p>
+      <p>2. Upload <code>SBI_Report_Hub.html</code> as <code>index.html</code></p>
+      <p>3. Settings → Pages → Branch: main → / (root) → Save</p>
+      <p>4. Access at <code>https://yourusername.github.io/sbi-report-hub</code></p>
+      <p style="margin-top:6px;color:var(--warn)">GM List syncs via Google Sheets — no data is stored on GitHub.</p>
+    </div>
+    <div class="help-block">
+      <h3 class="neutral">Colour Coding</h3>
+      <p><span style="color:var(--y-pri2)">■ Indigo/Cyan</span> = YONO report elements</p>
+      <p><span style="color:var(--g-pri2)">■ Saffron/Emerald</span> = Corporate GM report elements</p>
+      <p><span style="color:var(--y-acc2)">■ Cyan highlight</span> = My Region / My Branch (YONO)</p>
+      <p><span style="color:var(--g-acc2)">■ Emerald highlight</span> = My Region / My Branch (Corp)</p>
+      <p><span style="color:var(--warn)">■ Amber highlight</span> = Grahak Mitra branch</p>
+      <p><span style="color:var(--y-pri2)">■ Indigo badge</span> = Rank 1</p>
+    </div>
+    <div class="help-block">
+      <h3 class="neutral">PNG Export</h3>
+      <p>Each section exports as portrait A4 PNG at 2× resolution.</p>
+      <p>YONO PNGs use cool indigo-violet palette.</p>
+      <p>Corporate GM PNGs use warm saffron-emerald palette.</p>
+      <p>Internet needed on first open to load fonts from Google Fonts CDN.</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ══════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════
+const MY_CIRCLE = 'THIRUVANANTHAPURAM';
+const MY_MODULE = 'AO KOZHIKODE';
+const MY_REG_YONO = 'REG -004';   // YONO region code
+const MY_REG_CORP = 'REG - 04';   // Corporate region code
+const MY_RDISP   = 'Malappuram';
+const STORE_KEY  = 'yono_gm_master_v3';
+const GAS_URL_KEY= 'sbi_gas_url';
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let gmList = [];
+let srcData = [];
+let reportMode = null; // 'yono' | 'corp'
+
+function normCode(c){ return String(c||'').trim().replace(/^0+/,'')||'0'; }
+function parseBranchLabel(lbl){
+  const s=String(lbl||'').trim();
+  const m=s.match(/^(\d+)\s*-\s*(.+)$/);
+  return m?{code:m[1].trim(),name:m[2].trim()}:{code:s,name:s};
+}
+
+// ══════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════
+function switchTab(t){
+  ['report','gm','sheets','help'].forEach((id,i)=>{
+    document.getElementById('tab-'+id).className='tab';
+    document.getElementById('panel-'+id).classList.remove('active');
+  });
+  const cls = reportMode==='corp'?'active-corp':'active-yono';
+  document.getElementById('tab-'+t).className='tab '+cls;
+  document.getElementById('panel-'+t).classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+//  GM STORAGE (localStorage + Google Sheets)
+// ══════════════════════════════════════════════
+function loadGM(){
+  try{ gmList=JSON.parse(localStorage.getItem(STORE_KEY)||'[]'); }catch(e){ gmList=[]; }
+  renderGMList();
+  const url=localStorage.getItem(GAS_URL_KEY)||'';
+  if(url) document.getElementById('gas-url').value=url;
+  updateSyncDot(url?'connected':'disconnected');
+}
+function saveGM(){
+  localStorage.setItem(STORE_KEY,JSON.stringify(gmList));
+  renderGMList();
+}
+function renderGMList(){
+  document.getElementById('gm-count').textContent=gmList.length+' branches';
+  const el=document.getElementById('gm-list');
+  if(!gmList.length){el.innerHTML='<div style="padding:14px;text-align:center;color:var(--muted);font-size:11px">No branches yet.</div>';return;}
+  el.innerHTML=gmList.map((g,i)=>`
+    <div class="gm-item">
+      <span class="gm-code">${g.code}</span>
+      <span class="gm-name">${g.name}</span>
+      <span class="gm-badge">${g.cat}</span>
+      <button class="gm-rm" onclick="removeGM(${i})">✕</button>
+    </div>`).join('');
+}
+function showGMStatus(msg,type){
+  const el=document.getElementById('gm-status');
+  el.innerHTML=`<span class="chip ${type}">${msg}</span>`;
+  setTimeout(()=>el.innerHTML='',2800);
+}
+function addGM(){
+  const code=document.getElementById('gm-code').value.trim();
+  const name=document.getElementById('gm-name').value.trim().toUpperCase();
+  const cat=document.getElementById('gm-cat').value;
+  if(!code||!name){showGMStatus('Enter both code and name.','err');return;}
+  if(gmList.find(g=>normCode(g.code)===normCode(code))){showGMStatus('Code already exists.','err');return;}
+  gmList.push({code,name,cat}); saveGM();
+  document.getElementById('gm-code').value='';
+  document.getElementById('gm-name').value='';
+  showGMStatus('✓ Added: '+name,'ok');
+}
+function removeGM(i){gmList.splice(i,1);saveGM();}
+function clearGM(){if(confirm('Clear all '+gmList.length+' GM branches?')){gmList=[];saveGM();}}
+function exportGM(){
+  const rows=['Code,Name,Category',...gmList.map(g=>`${g.code},${g.name},${g.cat}`)];
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.join('\n'));
+  a.download='GM_Master_List.csv';a.click();
+}
+function importGM(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const lines=ev.target.result.split('\n').slice(1);
+    let added=0;
+    lines.forEach(l=>{
+      const p=l.split(',');
+      if(p.length>=2){
+        const code=p[0].trim(),name=p[1].trim().toUpperCase(),cat=p[2]?p[2].trim():'Grahak Mitra';
+        if(code&&name&&!gmList.find(g=>normCode(g.code)===normCode(code))){gmList.push({code,name,cat});added++;}
+      }
+    });
+    saveGM(); showGMStatus('✓ Imported '+added+' branches.','ok');
+  };
+  r.readAsText(f); e.target.value='';
+}
+
+// ══════════════════════════════════════════════
+//  GOOGLE SHEETS SYNC
+// ══════════════════════════════════════════════
+function saveGASUrl(){
+  const url=document.getElementById('gas-url').value.trim();
+  localStorage.setItem(GAS_URL_KEY,url);
+  updateSyncDot(url?'connected':'disconnected');
+}
+function updateSyncDot(state){
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-label');
+  dot.className='sync-dot '+state;
+  if(state==='connected') lbl.textContent='URL saved — click Test to verify connection';
+  else if(state==='syncing') lbl.textContent='Syncing…';
+  else lbl.textContent='Not connected to Google Sheets';
+}
+function showSheetsStatus(msg,type){
+  const el=document.getElementById('sheets-status');
+  el.innerHTML=`<span class="chip ${type}">${msg}</span>`;
+  setTimeout(()=>el.innerHTML='',4000);
+}
+async function gasRequest(params,body=null){
+  const url=document.getElementById('gas-url').value.trim();
+  if(!url){showSheetsStatus('Paste your Apps Script URL first.','err');return null;}
+  try{
+    const opt=body
+      ?{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'application/json'}}
+      :{method:'GET'};
+    const res=await fetch(url+(params?'?'+new URLSearchParams(params):''),opt);
+    return await res.json();
+  }catch(e){
+    showSheetsStatus('Connection error: '+e.message,'err');
+    return null;
+  }
+}
+async function testConnection(){
+  updateSyncDot('syncing');
+  const r=await gasRequest({action:'get'});
+  if(r&&r.ok){
+    updateSyncDot('connected');
+    document.getElementById('sync-label').textContent='Connected! Sheet has '+r.data.length+' branches.';
+    showSheetsStatus('✓ Connected — '+r.data.length+' branches in sheet.','ok');
+  } else {
+    updateSyncDot('disconnected');
+    showSheetsStatus('Connection failed. Check URL and deployment settings.','err');
+  }
+}
+async function pushToSheets(){
+  updateSyncDot('syncing');
+  const r=await gasRequest(null,{action:'set',data:gmList});
+  if(r&&r.ok){
+    updateSyncDot('connected');
+    document.getElementById('sync-label').textContent='Pushed '+r.count+' branches to Google Sheets';
+    showSheetsStatus('✓ Pushed '+r.count+' branches to Google Sheets.','ok');
+  } else {
+    updateSyncDot('disconnected');
+    showSheetsStatus('Push failed.','err');
+  }
+}
+async function pullFromSheets(){
+  updateSyncDot('syncing');
+  const r=await gasRequest({action:'get'});
+  if(r&&r.ok){
+    gmList=r.data.map(d=>({code:String(d.code),name:String(d.name),cat:String(d.cat||'Grahak Mitra')}));
+    saveGM();
+    updateSyncDot('connected');
+    document.getElementById('sync-label').textContent='Pulled '+gmList.length+' branches from Google Sheets';
+    showSheetsStatus('✓ Pulled '+gmList.length+' branches from Google Sheets.','ok');
+  } else {
+    updateSyncDot('disconnected');
+    showSheetsStatus('Pull failed.','err');
+  }
+}
+function copyScript(){
+  const txt=document.getElementById('gas-script').textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    showSheetsStatus('✓ Script copied to clipboard!','ok');
+  });
+}
+
+// ══════════════════════════════════════════════
+//  FILE DETECTION & PARSING
+// ══════════════════════════════════════════════
+function handleFile(e){
+  const f=e.target.files[0];if(!f)return;
+  const st=document.getElementById('file-status');
+  st.innerHTML='<span class="chip info">Reading file…</span>';
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const sheetName=wb.SheetNames[0];
+      const ws=wb.Sheets[sheetName];
+      const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+
+      // AUTO-DETECT: check row 3 (index 2) for CIRCLENAME
+      let mode='yono';
+      if(raw.length>=3){
+        const hdr3=raw[2].map(h=>String(h||'').trim().toUpperCase());
+        if(hdr3.some(h=>h.includes('CIRCLE'))) mode='corp';
+      }
+      reportMode=mode;
+      updateModeUI(mode);
+
+      if(mode==='yono') parseYONO(raw,f.name,sheetName);
+      else parseCorp(raw,f.name,sheetName);
+
+    }catch(err){
+      st.innerHTML=`<span class="chip err">Error: ${err.message}</span>`;
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function updateModeUI(mode){
+  const pill=document.getElementById('mode-pill');
+  const badge=document.getElementById('detect-badge');
+  if(mode==='yono'){
+    pill.className='mode-pill yono';pill.textContent='YONO Mode';
+    badge.style.display='inline-flex';
+    badge.className='detect-badge yono';
+    badge.innerHTML='✦ YONO Report Detected';
+  } else {
+    pill.className='mode-pill corp';pill.textContent='Corporate GM Mode';
+    badge.style.display='inline-flex';
+    badge.className='detect-badge corp';
+    badge.innerHTML='✦ Corporate GM Report Detected';
+  }
+  // update tab active class
+  ['report','gm','sheets','help'].forEach(id=>{
+    const t=document.getElementById('tab-'+id);
+    if(t.classList.contains('active-yono')||t.classList.contains('active-corp')){
+      t.className='tab '+(mode==='corp'?'active-corp':'active-yono');
+    }
+  });
+}
+
+function parseYONO(raw,fname,sheetName){
+  const st=document.getElementById('file-status');
+  srcData=[];
+  for(let i=1;i<raw.length;i++){
+    const row=raw[i];
+    const branch=String(row[4]||'').trim();
+    if(!branch)continue;
+    srcData.push({
+      module:String(row[2]||'').trim().toUpperCase(),
+      region:String(row[3]||'').trim().toUpperCase(),
+      branch:branch,
+      code:String(row[5]||'').trim(),
+      users:parseInt(row[6])||0
+    });
+  }
+  if(!srcData.length){st.innerHTML='<span class="chip err">No data rows found (YONO). Check columns C–G.</span>';return;}
+  st.innerHTML=`<span class="chip ok">✓ YONO · ${srcData.length} branches loaded from "${fname}" · Sheet: ${sheetName}</span>`;
+  buildYONOReport();
+}
+
+function parseCorp(raw,fname,sheetName){
+  const st=document.getElementById('file-status');
+  if(raw.length<4){st.innerHTML='<span class="chip err">Not enough rows. Expected header row 3, data from row 4.</span>';return;}
+  const hdr=raw[2].map(h=>String(h||'').trim().toUpperCase());
+  const cCircle=hdr.findIndex(h=>h.includes('CIRCLE'));
+  const cModule=hdr.findIndex(h=>h.includes('MODULE'));
+  const cRegion=hdr.findIndex(h=>h.includes('REGION'));
+  const cBranch=hdr.findIndex(h=>h.includes('BRANCH'));
+  srcData=[];
+  for(let i=3;i<raw.length;i++){
+    const row=raw[i];
+    const branchLbl=String(row[cBranch>=0?cBranch:5]||'').trim();
+    if(!branchLbl)continue;
+    const {code,name}=parseBranchLabel(branchLbl);
+    srcData.push({
+      circle:String(row[cCircle>=0?cCircle:1]||'').trim().toUpperCase(),
+      module:String(row[cModule>=0?cModule:3]||'').trim().toUpperCase(),
+      region:String(row[cRegion>=0?cRegion:4]||'').trim().toUpperCase(),
+      bcode:code,bname:name,
+      monthly:parseFloat(row[10])||0,
+      annual:parseFloat(row[14])||0
+    });
+  }
+  if(!srcData.length){st.innerHTML='<span class="chip err">No data rows parsed (Corporate). Check column layout.</span>';return;}
+  st.innerHTML=`<span class="chip ok">✓ Corporate GM · ${srcData.length} rows loaded from "${fname}" · Sheet: ${sheetName}</span>`;
+  buildCorpReport();
+}
+
+// ══════════════════════════════════════════════
+//  YONO REPORT BUILDER
+// ══════════════════════════════════════════════
+function buildYONOReport(){
+  document.getElementById('report-area').style.display='block';
+  const myB=srcData.filter(d=>d.module===MY_MODULE&&d.region===MY_REG_YONO);
+  const totU=srcData.reduce((s,d)=>s+d.users,0);
+  const myU=myB.reduce((s,d)=>s+d.users,0);
+  const gmCodes=new Set(gmList.map(g=>normCode(g.code)));
+  const gmB=myB.filter(d=>gmCodes.has(normCode(d.code)));
+  document.getElementById('sum-cards').innerHTML=`
+    <div class="sc c1"><div class="sv">${srcData.length}</div><div class="sl">Total Branches</div></div>
+    <div class="sc c2"><div class="sv">${myB.length}</div><div class="sl">REG-004 Branches</div></div>
+    <div class="sc c3"><div class="sv">${gmB.length}</div><div class="sl">GM Matched</div></div>
+    <div class="sc c4"><div class="sv">${totU.toLocaleString()}</div><div class="sl">Circle Users</div></div>
+    <div class="sc c5"><div class="sv">${myU.toLocaleString()}</div><div class="sl">REG-004 Users</div></div>
+    <div class="sc c6"><div class="sv">${gmB.reduce((s,d)=>s+d.users,0).toLocaleString()}</div><div class="sl">GM Users</div></div>`;
+  document.getElementById('sections-html').innerHTML=yS1()+yS2()+yS3()+yS4();
+  document.getElementById('png-btns').innerHTML=
+    `<button class="btn btn-y" onclick="dlPNG('y',1)">⬇ S1 PNG</button>
+     <button class="btn btn-y" onclick="dlPNG('y',2)">⬇ S2 PNG</button>
+     <button class="btn btn-y" onclick="dlPNG('y',3)">⬇ S3 PNG</button>
+     <button class="btn btn-y" onclick="dlPNG('y',4)">⬇ S4 PNG</button>
+     <button class="btn btn-ok" onclick="dlAllPNG('y',4)">⬇ All YONO PNGs</button>`;
+}
+
+function yRegionAgg(){
+  const m={};
+  srcData.forEach(d=>{
+    const k=d.module+'|'+d.region;
+    m[k]=(m[k]||0)+d.users;
+  });
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+
+function yRb(i,isMy){
+  if(isMy) return `<span class="rb rb-ym">${i+1}</span>`;
+  if(i===0) return `<span class="rb rb-y1">1</span>`;
+  if(i===1) return `<span class="rb rb-y2">2</span>`;
+  if(i===2) return `<span class="rb rb-y3">3</span>`;
+  return `<span class="rb rb-yp">${i+1}</span>`;
+}
+function yRowClass(i,isMy){ return isMy?'my-row':i===0?'rank1':i===1?'rank2':i===2?'rank3':i%2?'alt':''; }
+
+function yS1(){
+  const regs=yRegionAgg();
+  const top5=regs.slice(0,5);
+  const myKey=MY_MODULE+'|'+MY_REG_YONO;
+  const myIdx=regs.findIndex(r=>r[0]===myKey);
+  const myInTop5=top5.some(r=>r[0]===myKey);
+  let rows='';
+  top5.forEach(([k,u],i)=>{
+    const [mod,reg]=k.split('|');const isMy=k===myKey;
+    const dReg=isMy?MY_RDISP+' (REG-004)':reg;
+    rows+=`<tr class="${yRowClass(i,isMy)}"><td style="text-align:center">${yRb(i,isMy)}</td><td>${mod}</td><td>${dReg}</td><td style="text-align:right;font-family:var(--mono)">${u.toLocaleString()}</td></tr>`;
+  });
+  const note=!myInTop5?`<div class="note-strip warn">${MY_RDISP} ranks #${myIdx+1} with ${regs[myIdx]?regs[myIdx][1].toLocaleString():0} users — outside Top 5</div>`:'';
+  return`<div class="sec-wrap"><div class="sec-hdr sy1"><span class="sec-num">1</span>Top 5 Regions — Circle-wide (YONO)</div>
+  <table class="rpt-table yono"><thead><tr><th>Rank</th><th>AO Module</th><th>Region</th><th>Users</th></tr></thead><tbody>${rows}</tbody></table>${note}</div>`;
+}
+function yS2(){
+  const sorted=[...srcData].sort((a,b)=>b.users-a.users).slice(0,10);
+  let rows='';
+  sorted.forEach((d,i)=>{
+    const isMy=d.module===MY_MODULE&&d.region===MY_REG_YONO;
+    const isAO=d.module===MY_MODULE&&!isMy;
+    rows+=`<tr class="${isMy?'my-row':isAO?'rank2':yRowClass(i,false)}"><td style="text-align:center">${yRb(i,isMy)}</td><td>${d.branch}</td><td style="text-align:center;font-family:var(--mono);font-size:10px">${d.code}</td><td style="text-align:right;font-family:var(--mono)">${d.users.toLocaleString()}</td></tr>`;
+  });
+  return`<div class="sec-wrap"><div class="sec-hdr sy2"><span class="sec-num">2</span>Top 10 Branches — Circle-wide (YONO)</div>
+  <table class="rpt-table yono"><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Users</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="legend"><span><span class="leg-dot" style="background:var(--y-acc)"></span>My REG-004 branch</span><span><span class="leg-dot" style="background:var(--y-pri)"></span>Same AO, other region</span></div></div>`;
+}
+function yS3(){
+  const myB=[...srcData.filter(d=>d.module===MY_MODULE&&d.region===MY_REG_YONO)].sort((a,b)=>b.users-a.users);
+  const allS=[...srcData].sort((a,b)=>b.users-a.users);
+  if(!myB.length)return`<div class="sec-wrap"><div class="sec-hdr sy3"><span class="sec-num">3</span>${MY_RDISP} Branch Ranking (YONO)</div><div class="note-strip err">No REG-004 branches found.</div></div>`;
+  let rows='';
+  myB.forEach((d,i)=>{
+    const cr=allS.findIndex(x=>normCode(x.code)===normCode(d.code))+1;
+    rows+=`<tr class="${yRowClass(i,true)}"><td style="text-align:center">${yRb(i,true)}</td><td>${d.branch}</td><td style="text-align:center;font-family:var(--mono);font-size:10px">${d.code}</td><td style="text-align:right;font-family:var(--mono)">${d.users.toLocaleString()}</td><td style="text-align:center"><span class="rb rb-yp" style="width:auto;padding:0 6px;border-radius:10px">#${cr}</span></td></tr>`;
+  });
+  return`<div class="sec-wrap"><div class="sec-hdr sy3"><span class="sec-num">3</span>${MY_RDISP} | REG-004 Branch Ranking (${myB.length} branches)</div>
+  <table class="rpt-table yono"><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Users</th><th>Circle Rank</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function yS4(){
+  const gmCodes=new Set(gmList.map(g=>normCode(g.code)));
+  const myB=srcData.filter(d=>d.module===MY_MODULE&&d.region===MY_REG_YONO);
+  const gmB=[...myB.filter(d=>gmCodes.has(normCode(d.code)))].sort((a,b)=>b.users-a.users);
+  const regS=[...myB].sort((a,b)=>b.users-a.users);
+  if(!gmList.length)return`<div class="sec-wrap"><div class="sec-hdr sy4"><span class="sec-num">4</span>GM Branch Ranking (YONO)</div><div class="note-strip err">Add branches in GM Master List tab.</div></div>`;
+  if(!gmB.length)return`<div class="sec-wrap"><div class="sec-hdr sy4"><span class="sec-num">4</span>GM Branch Ranking (YONO)</div><div class="note-strip warn">No GM branches matched in uploaded data.</div></div>`;
+  let rows='';
+  gmB.forEach((d,i)=>{
+    const rr=regS.findIndex(x=>normCode(x.code)===normCode(d.code))+1;
+    const cat=gmList.find(g=>normCode(g.code)===normCode(d.code))?.cat||'GM';
+    rows+=`<tr class="${yRowClass(i,true)}"><td style="text-align:center">${yRb(i,true)}</td><td>${d.branch}</td><td style="text-align:center;font-family:var(--mono);font-size:10px">${d.code}</td><td style="text-align:center;font-size:9px"><span class="gm-badge">${cat}</span></td><td style="text-align:right;font-family:var(--mono)">${d.users.toLocaleString()}</td><td style="text-align:center"><span class="rb rb-yp" style="width:auto;padding:0 6px;border-radius:10px">#${rr}</span></td></tr>`;
+  });
+  const miss=gmList.filter(g=>!myB.find(b=>normCode(b.code)===normCode(g.code)));
+  const missNote=miss.length?`<div class="note-strip warn">${miss.length} GM code(s) not in data: ${miss.map(g=>g.code).join(', ')}</div>`:'';
+  return`<div class="sec-wrap"><div class="sec-hdr sy4"><span class="sec-num">4</span>GM Branch Ranking — ${MY_RDISP} (${gmB.length} branches)</div>
+  <table class="rpt-table yono"><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Category</th><th>Users</th><th>Region Rank</th></tr></thead><tbody>${rows}</tbody></table>${missNote}</div>`;
+}
+
+// ══════════════════════════════════════════════
+//  CORPORATE REPORT BUILDER
+// ══════════════════════════════════════════════
+function regionAggCorp(rows){
+  const m={};
+  rows.forEach(d=>{
+    const k=d.module+'|'+d.region;
+    if(!m[k])m[k]={module:d.module,region:d.region,monthly:0,annual:0,count:0};
+    m[k].monthly+=d.monthly;m[k].annual+=d.annual;m[k].count++;
+  });
+  return Object.values(m).sort((a,b)=>b.monthly-a.monthly);
+}
+function gRb(i,isMy,isGM){
+  if(isGM)  return`<span class="rb rb-gw">${i+1}</span>`;
+  if(isMy)  return`<span class="rb rb-gm">${i+1}</span>`;
+  if(i===0) return`<span class="rb rb-g1">1</span>`;
+  if(i===1) return`<span class="rb rb-g2">2</span>`;
+  if(i===2) return`<span class="rb rb-g3">3</span>`;
+  return`<span class="rb rb-gp">${i+1}</span>`;
+}
+function gRowClass(i,isMy,isGM){ return isGM?'gm-row':isMy?'my-row':i===0?'rank1':i===1?'rank2':i===2?'rank3':i%2?'alt':''; }
+
+function buildCorpReport(){
+  document.getElementById('report-area').style.display='block';
+  const circRows=srcData.filter(d=>d.circle===MY_CIRCLE);
+  const myRows=srcData.filter(d=>d.module===MY_MODULE&&d.region===MY_REG_CORP);
+  const allRegs=regionAggCorp(srcData);
+  const circRegs=regionAggCorp(circRows);
+  const myRegAgg=allRegs.find(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)||{monthly:0,annual:0,count:0};
+  const corpRank=allRegs.findIndex(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)+1;
+  const circRank=circRegs.findIndex(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)+1;
+  const gmCodes=new Set(gmList.map(g=>normCode(g.code)));
+  const gmB=myRows.filter(d=>gmCodes.has(normCode(d.bcode)));
+
+  document.getElementById('sum-cards').innerHTML=`
+    <div class="sc g1"><div class="sv">#${corpRank||'?'}</div><div class="sl">Corporate Rank</div></div>
+    <div class="sc g2"><div class="sv">#${circRank||'?'}</div><div class="sl">Circle Rank</div></div>
+    <div class="sc g3"><div class="sv">${myRows.length}</div><div class="sl">My Branches</div></div>
+    <div class="sc g4"><div class="sv">${gmB.length}</div><div class="sl">GM Matched</div></div>
+    <div class="sc g5"><div class="sv">${(myRegAgg.monthly||0).toLocaleString()}</div><div class="sl">Monthly Reg.</div></div>
+    <div class="sc g6"><div class="sv">${allRegs.length}</div><div class="sl">Total Regions</div></div>`;
+
+  document.getElementById('sections-html').innerHTML=gS1(allRegs,circRegs,myRows)+gS2(circRegs)+gS3(circRows)+gS4(myRows,circRows)+gS5(myRows);
+  document.getElementById('png-btns').innerHTML=
+    `<button class="btn btn-g" onclick="dlPNG('g',1)">⬇ S1 PNG</button>
+     <button class="btn btn-g" onclick="dlPNG('g',2)">⬇ S2 PNG</button>
+     <button class="btn btn-g" onclick="dlPNG('g',3)">⬇ S3 PNG</button>
+     <button class="btn btn-g" onclick="dlPNG('g',4)">⬇ S4 PNG</button>
+     <button class="btn btn-g" onclick="dlPNG('g',5)">⬇ S5 PNG</button>
+     <button class="btn btn-ok" onclick="dlAllPNG('g',5)">⬇ All Corp PNGs</button>`;
+}
+
+function gS1(allRegs,circRegs,myRows){
+  const corpRank=allRegs.findIndex(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)+1;
+  const circRank=circRegs.findIndex(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)+1;
+  const myR=allRegs.find(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)||{monthly:0,annual:0};
+  const above=corpRank>1?allRegs[corpRank-2]:null;
+  const below=corpRank<allRegs.length?allRegs[corpRank]:null;
+  const gap=above?above.monthly-myR.monthly:0;
+  let rows='';
+  if(above) rows+=`<tr class="rank2"><td style="text-align:center">${gRb(corpRank-2,false,false)}</td><td>${above.module}</td><td>${above.region}</td><td style="text-align:right;font-family:var(--mono)">${above.monthly.toLocaleString()}</td><td style="text-align:right;font-family:var(--mono)">${above.annual.toLocaleString()}</td><td style="text-align:center;font-size:9px;color:var(--muted)">▲ above</td></tr>`;
+  rows+=`<tr class="my-row"><td style="text-align:center">${gRb(0,true,false)}</td><td>${MY_MODULE}</td><td>${MY_RDISP} (${MY_REG_CORP})</td><td style="text-align:right;font-family:var(--mono)">${myR.monthly.toLocaleString()}</td><td style="text-align:right;font-family:var(--mono)">${myR.annual.toLocaleString()}</td><td style="text-align:center"><span style="font-size:9px;font-weight:700;color:var(--g-acc)">MY REGION</span></td></tr>`;
+  if(below) rows+=`<tr class="alt"><td style="text-align:center">${gRb(corpRank,false,false)}</td><td>${below.module}</td><td>${below.region}</td><td style="text-align:right;font-family:var(--mono)">${below.monthly.toLocaleString()}</td><td style="text-align:right;font-family:var(--mono)">${below.annual.toLocaleString()}</td><td style="text-align:center;font-size:9px;color:var(--muted)">▼ below</td></tr>`;
+  const gapNote=gap>0?`<div class="note-strip info">▲ Gap to climb: ${gap.toLocaleString()} registrations &nbsp;·&nbsp; Circle rank: #${circRank} of ${circRegs.length}</div>`:`<div class="note-strip info">Circle rank: #${circRank} of ${circRegs.length} &nbsp;·&nbsp; Corporate rank: #${corpRank} of ${allRegs.length}</div>`;
+  return`<div class="sec-wrap"><div class="sec-hdr sg1"><span class="sec-num">1</span>My Region — Corporate Position (#${corpRank} of ${allRegs.length})</div>
+  <table class="rpt-table corp"><thead><tr><th>Corp Rank</th><th>Module</th><th>Region</th><th>Monthly</th><th>Annual</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>${gapNote}</div>`;
+}
+function gS2(circRegs){
+  const top10=circRegs.slice(0,10);
+  let rows='';
+  top10.forEach((r,i)=>{
+    const isMy=r.module===MY_MODULE&&r.region===MY_REG_CORP;
+    rows+=`<tr class="${gRowClass(i,isMy,false)}"><td style="text-align:center">${gRb(i,isMy,false)}</td><td>${r.module}</td><td>${isMy?MY_RDISP+' ('+MY_REG_CORP+')':r.region}</td><td style="text-align:right;font-family:var(--mono)">${r.monthly.toLocaleString()}</td><td style="text-align:right;font-family:var(--mono)">${r.annual.toLocaleString()}</td><td style="text-align:center">${r.count}</td></tr>`;
+  });
+  const myRk=circRegs.findIndex(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)+1;
+  const note=myRk>10?`<div class="note-strip warn">${MY_RDISP} ranks #${myRk} in circle — outside top 10</div>`:'';
+  return`<div class="sec-wrap"><div class="sec-hdr sg2"><span class="sec-num">2</span>Top 10 Regions — ${MY_CIRCLE} Circle</div>
+  <table class="rpt-table corp"><thead><tr><th>Rank</th><th>Module</th><th>Region</th><th>Monthly</th><th>Annual</th><th>Branches</th></tr></thead><tbody>${rows}</tbody></table>${note}</div>`;
+}
+function gS3(circRows){
+  const sorted=[...circRows].sort((a,b)=>b.monthly-a.monthly).slice(0,10);
+  let rows='';
+  sorted.forEach((d,i)=>{
+    const isMy=d.module===MY_MODULE&&d.region===MY_REG_CORP;
+    rows+=`<tr class="${gRowClass(i,isMy,false)}"><td style="text-align:center">${gRb(i,isMy,false)}</td><td>${d.bname}</td><td style="text-align:center;font-family:var(--mono);font-size:10px">${d.bcode}</td><td>${d.module}</td><td style="text-align:right;font-family:var(--mono)">${d.monthly.toLocaleString()}</td><td style="text-align:right;font-family:var(--mono)">${d.annual.toLocaleString()}</td></tr>`;
+  });
+  return`<div class="sec-wrap"><div class="sec-hdr sg3"><span class="sec-num">3</span>Top 10 Branches — ${MY_CIRCLE} Circle</div>
+  <table class="rpt-table corp"><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Module</th><th>Monthly</th><th>Annual</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function gS4(myRows,circRows){
+  const myS=[...myRows].sort((a,b)=>b.monthly-a.monthly);
+  const circS=[...circRows].sort((a,b)=>b.monthly-a.monthly);
+  let rows='';
+  myS.forEach((d,i)=>{
+    const cr=circS.findIndex(x=>normCode(x.bcode)===normCode(d.bcode))+1;
+    rows+=`<tr class="${gRowClass(i,true,false)}"><td style="text-align:center">${gRb(i,true,false)}</td><td>${d.bname}</td><td style="text-align:center;font-family:var(--mono);font-size:10px">${d.bcode}</td><td style="text-align:right;font-family:var(--mono)">${d.monthly.toLocaleString()}</td><td style="text-align:right;font-family:var(--mono)">${d.annual.toLocaleString()}</td><td style="text-align:center"><span class="rb rb-gp" style="width:auto;padding:0 6px;border-radius:10px">#${cr||'?'}</span></td></tr>`;
+  });
+  return`<div class="sec-wrap"><div class="sec-hdr sg4"><span class="sec-num">4</span>My Branch Ranking — ${MY_RDISP} (${myS.length} branches)</div>
+  <table class="rpt-table corp"><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Monthly</th><th>Annual</th><th>Circle Rank</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function gS5(myRows){
+  const gmCodes=new Set(gmList.map(g=>normCode(g.code)));
+  const gmB=[...myRows.filter(d=>gmCodes.has(normCode(d.bcode)))].sort((a,b)=>b.monthly-a.monthly);
+  const regS=[...myRows].sort((a,b)=>b.monthly-a.monthly);
+  if(!gmList.length)return`<div class="sec-wrap"><div class="sec-hdr sg5"><span class="sec-num">5</span>GM Branch Ranking</div><div class="note-strip err">No GM branches in master list. Add in GM List tab.</div></div>`;
+  if(!gmB.length)return`<div class="sec-wrap"><div class="sec-hdr sg5"><span class="sec-num">5</span>GM Branch Ranking</div><div class="note-strip warn">No GM branches matched in uploaded data.</div></div>`;
+  let rows='';
+  gmB.forEach((d,i)=>{
+    const rr=regS.findIndex(x=>normCode(x.bcode)===normCode(d.bcode))+1;
+    const cat=gmList.find(g=>normCode(g.code)===normCode(d.bcode))?.cat||'GM';
+    rows+=`<tr class="${gRowClass(i,false,true)}"><td style="text-align:center">${gRb(i,false,true)}</td><td>${d.bname}</td><td style="text-align:center;font-family:var(--mono);font-size:10px">${d.bcode}</td><td style="text-align:center;font-size:9px"><span class="gm-badge">${cat}</span></td><td style="text-align:right;font-family:var(--mono)">${d.monthly.toLocaleString()}</td><td style="text-align:right;font-family:var(--mono)">${d.annual.toLocaleString()}</td><td style="text-align:center"><span class="rb rb-gp" style="width:auto;padding:0 6px;border-radius:10px">#${rr}</span></td></tr>`;
+  });
+  const miss=gmList.filter(g=>!myRows.find(b=>normCode(b.bcode)===normCode(g.code)));
+  const missNote=miss.length?`<div class="note-strip warn">${miss.length} code(s) not in data: ${miss.map(g=>g.code+' ('+g.name+')').join(', ')}</div>`:'';
+  return`<div class="sec-wrap"><div class="sec-hdr sg5"><span class="sec-num">5</span>GM Branch Ranking — ${MY_RDISP} (${gmB.length} matched)</div>
+  <table class="rpt-table corp"><thead><tr><th>GM Rank</th><th>Branch</th><th>Code</th><th>Category</th><th>Monthly</th><th>Annual</th><th>Region Rank</th></tr></thead><tbody>${rows}</tbody></table>${missNote}</div>`;
+}
+
+// ══════════════════════════════════════════════
+//  PNG EXPORT
+// ══════════════════════════════════════════════
+function makePNGPage(mode,secNum){
+  const now=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  const div=document.createElement('div');
+  div.className='png-page '+mode;
+  document.body.appendChild(div);
+
+  const isYono=mode==='y';
+  const title=isYono?'YONO Registered Users Report':'Grahak Mitra — Corporate Level Report';
+  const sub=isYono
+    ?`AO Kozhikode | REG-004 ${MY_RDISP} | Kerala Circle | ${now}`
+    :`AO Kozhikode | REG-04 ${MY_RDISP} | Circle: ${MY_CIRCLE} | ${now}`;
+
+  div.innerHTML=`<div class="ph1">${title}</div><div class="ph2">${sub}</div>`;
+
+  if(isYono){
+    // YONO summary row
+    const myB=srcData.filter(d=>d.module===MY_MODULE&&d.region===MY_REG_YONO);
+    const totU=srcData.reduce((s,d)=>s+d.users,0);
+    const myU=myB.reduce((s,d)=>s+d.users,0);
+    const gmCodes=new Set(gmList.map(g=>normCode(g.code)));
+    const gmB=myB.filter(d=>gmCodes.has(normCode(d.code)));
+    div.innerHTML+=`<div class="sum-row">
+      <div class="psc c1"><div class="psv">${srcData.length}</div><div class="psl">Total Branches</div></div>
+      <div class="psc c2"><div class="psv">${myB.length}</div><div class="psl">REG-004</div></div>
+      <div class="psc c3"><div class="psv">${gmB.length}</div><div class="psl">GM Matched</div></div>
+      <div class="psc c4"><div class="psv">${totU.toLocaleString()}</div><div class="psl">Circle Users</div></div>
+      <div class="psc c5"><div class="psv">${myU.toLocaleString()}</div><div class="psl">REG-004 Users</div></div>
+    </div>`;
+    if(secNum===1){
+      const regs=yRegionAgg();const top5=regs.slice(0,5);
+      const myKey=MY_MODULE+'|'+MY_REG_YONO;const myIdx=regs.findIndex(r=>r[0]===myKey);
+      let rows='';
+      top5.forEach(([k,u],i)=>{
+        const [mod,reg]=k.split('|');const isMy=k===myKey;
+        rows+=`<tr class="${isMy?'pmr':i===0?'pr1':i<3?'pr2':''}"><td style="text-align:center">${i+1}</td><td>${mod}</td><td>${isMy?MY_RDISP+' (REG-004)':reg}</td><td style="text-align:right">${u.toLocaleString()}</td></tr>`;
+      });
+      div.innerHTML+=`<div class="psec s1">Section 1 — Top 5 Regions (YONO · Circle-wide)</div>
+      <table><thead><tr><th>Rank</th><th>AO Module</th><th>Region</th><th>Users</th></tr></thead><tbody>${rows}</tbody></table>
+      ${!top5.some(([k])=>k===myKey)?`<div class="pnote">${MY_RDISP} ranks #${myIdx+1} — outside Top 5</div>`:''}`;
+    }
+    if(secNum===2){
+      const sorted=[...srcData].sort((a,b)=>b.users-a.users).slice(0,10);
+      let rows='';
+      sorted.forEach((d,i)=>{
+        const isMy=d.module===MY_MODULE&&d.region===MY_REG_YONO;
+        rows+=`<tr class="${isMy?'pmr':i===0?'pr1':i<3?'pr2':''}"><td style="text-align:center">${i+1}</td><td>${d.branch}</td><td style="text-align:center;font-family:'Courier New'">${d.code}</td><td style="text-align:right">${d.users.toLocaleString()}</td></tr>`;
+      });
+      div.innerHTML+=`<div class="psec s2">Section 2 — Top 10 Branches (YONO · Circle-wide)</div>
+      <table><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Users</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    if(secNum===3){
+      const myB2=[...srcData.filter(d=>d.module===MY_MODULE&&d.region===MY_REG_YONO)].sort((a,b)=>b.users-a.users);
+      const allS=[...srcData].sort((a,b)=>b.users-a.users);
+      let rows='';
+      myB2.forEach((d,i)=>{
+        const cr=allS.findIndex(x=>normCode(x.code)===normCode(d.code))+1;
+        rows+=`<tr class="${i===0?'pr1':i<3?'pr2':'pmr'}"><td style="text-align:center">${i+1}</td><td>${d.branch}</td><td style="text-align:center;font-family:'Courier New'">${d.code}</td><td style="text-align:right">${d.users.toLocaleString()}</td><td style="text-align:center">#${cr}</td></tr>`;
+      });
+      div.innerHTML+=`<div class="psec s3">Section 3 — ${MY_RDISP} REG-004 Branch Ranking (YONO · ${myB2.length} branches)</div>
+      <table><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Users</th><th>Circle Rank</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    if(secNum===4){
+      const gmCodes2=new Set(gmList.map(g=>normCode(g.code)));
+      const myB3=srcData.filter(d=>d.module===MY_MODULE&&d.region===MY_REG_YONO);
+      const gmB2=[...myB3.filter(d=>gmCodes2.has(normCode(d.code)))].sort((a,b)=>b.users-a.users);
+      const regS=[...myB3].sort((a,b)=>b.users-a.users);
+      let rows='';
+      gmB2.forEach((d,i)=>{
+        const rr=regS.findIndex(x=>normCode(x.code)===normCode(d.code))+1;
+        const cat=gmList.find(g=>normCode(g.code)===normCode(d.code))?.cat||'GM';
+        rows+=`<tr class="${i===0?'pr1':i<3?'pr2':'pmr'}"><td style="text-align:center">${i+1}</td><td>${d.branch}</td><td style="text-align:center;font-family:'Courier New'">${d.code}</td><td style="text-align:center;font-size:9px">${cat}</td><td style="text-align:right">${d.users.toLocaleString()}</td><td style="text-align:center">#${rr}</td></tr>`;
+      });
+      div.innerHTML+=`<div class="psec s4">Section 4 — GM Branch Ranking (YONO · ${gmB2.length} branches)</div>
+      <table><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Category</th><th>Users</th><th>Region Rank</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+  } else {
+    // Corp summary
+    const circRows=srcData.filter(d=>d.circle===MY_CIRCLE);
+    const myRows=srcData.filter(d=>d.module===MY_MODULE&&d.region===MY_REG_CORP);
+    const allRegs=regionAggCorp(srcData);
+    const circRegs=regionAggCorp(circRows);
+    const myR=allRegs.find(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)||{monthly:0,annual:0};
+    const corpRank=allRegs.findIndex(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)+1;
+    const circRank=circRegs.findIndex(r=>r.module===MY_MODULE&&r.region===MY_REG_CORP)+1;
+    const gmCodes=new Set(gmList.map(g=>normCode(g.code)));
+    const gmB=[...myRows.filter(d=>gmCodes.has(normCode(d.bcode)))].sort((a,b)=>b.monthly-a.monthly);
+    div.innerHTML+=`<div class="sum-row">
+      <div class="psc c1"><div class="psv">#${corpRank}</div><div class="psl">Corp Rank</div></div>
+      <div class="psc c2"><div class="psv">#${circRank}</div><div class="psl">Circle Rank</div></div>
+      <div class="psc c3"><div class="psv">${myRows.length}</div><div class="psl">My Branches</div></div>
+      <div class="psc c4"><div class="psv">${gmB.length}</div><div class="psl">GM Matched</div></div>
+      <div class="psc c5"><div class="psv">${(myR.monthly||0).toLocaleString()}</div><div class="psl">Monthly Reg.</div></div>
+    </div>`;
+    if(secNum===1){
+      const above=corpRank>1?allRegs[corpRank-2]:null;
+      const below=corpRank<allRegs.length?allRegs[corpRank]:null;
+      let rows='';
+      if(above) rows+=`<tr class="pr2"><td>${corpRank-1}</td><td>${above.module}</td><td>${above.region}</td><td style="text-align:right">${above.monthly.toLocaleString()}</td><td style="text-align:right">${above.annual.toLocaleString()}</td><td style="font-size:9px;color:#999">▲ above</td></tr>`;
+      rows+=`<tr class="pmr"><td>${corpRank}</td><td>${MY_MODULE}</td><td>${MY_RDISP}</td><td style="text-align:right">${myR.monthly.toLocaleString()}</td><td style="text-align:right">${myR.annual.toLocaleString()}</td><td style="font-size:9px;font-weight:700">MY REGION</td></tr>`;
+      if(below) rows+=`<tr><td>${corpRank+1}</td><td>${below.module}</td><td>${below.region}</td><td style="text-align:right">${below.monthly.toLocaleString()}</td><td style="text-align:right">${below.annual.toLocaleString()}</td><td style="font-size:9px;color:#999">▼ below</td></tr>`;
+      div.innerHTML+=`<div class="psec s1">Section 1 — Corporate Position (#${corpRank} of ${allRegs.length} regions)</div>
+      <table><thead><tr><th>Corp Rank</th><th>Module</th><th>Region</th><th>Monthly</th><th>Annual</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="pleg">Circle rank: #${circRank} of ${circRegs.length} | ${above?'Gap: '+(above.monthly-myR.monthly).toLocaleString()+' registrations':''}</div>`;
+    }
+    if(secNum===2){
+      const top10=circRegs.slice(0,10);let rows='';
+      top10.forEach((r,i)=>{
+        const isMy=r.module===MY_MODULE&&r.region===MY_REG_CORP;
+        rows+=`<tr class="${isMy?'pmr':i===0?'pr1':i<3?'pr2':''}"><td>${i+1}</td><td>${r.module}</td><td>${isMy?MY_RDISP:r.region}</td><td style="text-align:right">${r.monthly.toLocaleString()}</td><td style="text-align:right">${r.annual.toLocaleString()}</td><td style="text-align:center">${r.count}</td></tr>`;
+      });
+      div.innerHTML+=`<div class="psec s2">Section 2 — Top 10 Regions in ${MY_CIRCLE} Circle</div>
+      <table><thead><tr><th>Rank</th><th>Module</th><th>Region</th><th>Monthly</th><th>Annual</th><th>Branches</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    if(secNum===3){
+      const sorted=[...circRows].sort((a,b)=>b.monthly-a.monthly).slice(0,10);let rows='';
+      sorted.forEach((d,i)=>{
+        const isMy=d.module===MY_MODULE&&d.region===MY_REG_CORP;
+        rows+=`<tr class="${isMy?'pmr':i===0?'pr1':i<3?'pr2':''}"><td>${i+1}</td><td>${d.bname}</td><td style="font-family:'Courier New'">${d.bcode}</td><td>${d.module}</td><td style="text-align:right">${d.monthly.toLocaleString()}</td><td style="text-align:right">${d.annual.toLocaleString()}</td></tr>`;
+      });
+      div.innerHTML+=`<div class="psec s3">Section 3 — Top 10 Branches in ${MY_CIRCLE} Circle</div>
+      <table><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Module</th><th>Monthly</th><th>Annual</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    if(secNum===4){
+      const myS=[...myRows].sort((a,b)=>b.monthly-a.monthly);
+      const circS=[...circRows].sort((a,b)=>b.monthly-a.monthly);
+      let rows='';
+      myS.forEach((d,i)=>{
+        const cr=circS.findIndex(x=>normCode(x.bcode)===normCode(d.bcode))+1;
+        rows+=`<tr class="${i===0?'pr1':i<3?'pr2':'pmr'}"><td>${i+1}</td><td>${d.bname}</td><td style="font-family:'Courier New'">${d.bcode}</td><td style="text-align:right">${d.monthly.toLocaleString()}</td><td style="text-align:right">${d.annual.toLocaleString()}</td><td>#${cr}</td></tr>`;
+      });
+      div.innerHTML+=`<div class="psec s4">Section 4 — Branch Ranking: ${MY_RDISP} (${myS.length} branches)</div>
+      <table><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Monthly</th><th>Annual</th><th>Circle Rank</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    if(secNum===5){
+      const regS=[...myRows].sort((a,b)=>b.monthly-a.monthly);
+      let rows='';
+      gmB.forEach((d,i)=>{
+        const rr=regS.findIndex(x=>normCode(x.bcode)===normCode(d.bcode))+1;
+        const cat=gmList.find(g=>normCode(g.code)===normCode(d.bcode))?.cat||'GM';
+        rows+=`<tr class="${i===0?'pr1':i<3?'pr2':'pgm'}"><td>${i+1}</td><td>${d.bname}</td><td style="font-family:'Courier New'">${d.bcode}</td><td style="font-size:9px">${cat}</td><td style="text-align:right">${d.monthly.toLocaleString()}</td><td style="text-align:right">${d.annual.toLocaleString()}</td><td>#${rr}</td></tr>`;
+      });
+      div.innerHTML+=`<div class="psec s5">Section 5 — GM Branch Ranking: ${MY_RDISP} (${gmB.length} branches)</div>
+      <table><thead><tr><th>Rank</th><th>Branch</th><th>Code</th><th>Category</th><th>Monthly</th><th>Annual</th><th>Region Rank</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+  }
+  div.innerHTML+=`<div class="pfooter">AO Kozhikode · REG-04 ${MY_RDISP} · SBI Kerala Circle · ${mode==='y'?'YONO Report':'Corporate GM Report'} · ${now}</div>`;
+  return div;
+}
+
+async function dlPNG(mode,sec){
+  const btns=document.querySelectorAll('#png-btns button');
+  btns.forEach(b=>b.disabled=true);
+  try{
+    const div=makePNGPage(mode,sec);
+    await new Promise(r=>setTimeout(r,150));
+    const canvas=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:794,windowWidth:794});
+    document.body.removeChild(div);
+    const a=document.createElement('a');
+    a.download=`SBI_${mode==='y'?'YONO':'Corp'}_S${sec}_${new Date().toISOString().slice(0,10)}.png`;
+    a.href=canvas.toDataURL('image/png');a.click();
+  }catch(err){alert('PNG error: '+err.message);}
+  btns.forEach(b=>b.disabled=false);
+}
+
+async function dlAllPNG(mode,total){
+  const btns=document.querySelectorAll('#png-btns button');
+  btns.forEach(b=>b.disabled=true);
+  for(let s=1;s<=total;s++){
+    try{
+      const div=makePNGPage(mode,s);
+      await new Promise(r=>setTimeout(r,150));
+      const canvas=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',width:794,windowWidth:794});
+      document.body.removeChild(div);
+      const a=document.createElement('a');
+      a.download=`SBI_${mode==='y'?'YONO':'Corp'}_S${s}_${new Date().toISOString().slice(0,10)}.png`;
+      a.href=canvas.toDataURL('image/png');a.click();
+      await new Promise(r=>setTimeout(r,500));
+    }catch(err){alert('Section '+s+' error: '+err.message);}
+  }
+  btns.forEach(b=>b.disabled=false);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+loadGM();
+</script>
+</body>
+</html>
